@@ -1,0 +1,109 @@
+"""
+Estilos CSS personalizados para el sistema SHCP.
+Se incluye en las páginas de Streamlit.
+"""
+
+SHCP_CSS = """
+<style>
+    /* Colores institucionales SHCP */
+    :root {
+        --shcp-green: #10312B;
+        --shcp-gold: #BC955C;
+        --shcp-light: #F5F0E8;
+    }
+
+    /* Header institucional */
+    .shcp-header {
+        background-color: #10312B;
+        color: #BC955C;
+        padding: 15px 25px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .shcp-header h3 {
+        margin: 0;
+        color: #BC955C;
+        font-size: 1.2rem;
+    }
+
+    .shcp-header p {
+        margin: 5px 0;
+        color: #BC955C;
+        opacity: 0.8;
+        font-size: 0.9rem;
+    }
+
+    /* Tarjetas de servicio */
+    .service-card {
+        border: 2px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 25px;
+        text-align: center;
+        transition: all 0.3s ease;
+        background: white;
+        height: 220px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .service-card:hover {
+        border-color: #10312B;
+        box-shadow: 0 4px 12px rgba(16, 49, 43, 0.1);
+    }
+
+    .service-card h3 {
+        color: #10312B;
+        margin: 10px 0;
+    }
+
+    .service-card p {
+        color: #666;
+        font-size: 0.85rem;
+    }
+
+    .service-icon {
+        font-size: 2.5rem;
+    }
+
+    /* Footer */
+    .shcp-footer {
+        text-align: center;
+        font-size: 12px;
+        color: #999;
+        padding: 15px;
+        border-top: 1px solid #eee;
+        margin-top: 30px;
+    }
+
+    /* Badges de estado */
+    .badge-ok {
+        background: #d3f9d8;
+        color: #1b4332;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+    }
+
+    .badge-error {
+        background: #ffe3e3;
+        color: #7d0000;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+    }
+
+    .badge-pending {
+        background: #e9ecef;
+        color: #495057;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+    }
+</style>
+"""

@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+*.egg-info/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# R
+.Rhistory
+.RData
+.Rproj.user/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Auth (usuarios, contraseñas hasheadas y clave de cookie)
+auth_config.yaml
+qr_*.png
+
+# Auth - AWS Cognito (client secret)
+cognito_config.yaml
+
+# Env
+.env
+
+# Documentación (no se versiona en el repositorio)
+*.md

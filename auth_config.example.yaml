@@ -1,0 +1,21 @@
+# Plantilla de configuración de login.
+#
+# NO uses este archivo directamente. Genera tu propio auth_config.yaml
+# (que NO se sube a git, ver .gitignore) corriendo:
+#
+#   python scripts/hash_password.py
+#
+# Ese script crea el archivo real, hashea la contraseña con bcrypt y
+# genera una clave de cookie aleatoria por instalación.
+
+credentials:
+  usernames:
+    ejemplo:
+      name: Nombre Apellido
+      email: correo@shcp.gob.mx
+      password: "$2b$12$examplehasheddonotuse.......................hasheddonotuse"
+
+cookie:
+  name: shcp_monitoreo_auth
+  key: "reemplaza-esta-clave-por-una-generada-aleatoriamente"
+  expiry_days: 7

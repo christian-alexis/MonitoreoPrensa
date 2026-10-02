@@ -1,0 +1,15 @@
+[server]
+headless = true
+port = 8501
+address = "localhost"
+maxUploadSize = 200
+
+[theme]
+primaryColor = "#BC955C"
+backgroundColor = "#F8F9FA"
+secondaryBackgroundColor = "#E8ECF0"
+textColor = "#1A1A2E"
+font = "sans serif"
+
+[browser]
+gatherUsageStats = false

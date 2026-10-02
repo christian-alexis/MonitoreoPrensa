@@ -1,0 +1,13 @@
+# Copia este archivo a cognito_config.yaml (NO se sube a git) y llena
+# los valores reales del User Pool y App Client. Ver AWS_COGNITO.md
+# para cómo obtener cada dato.
+
+region: us-east-2
+user_pool_id: us-east-2_XXXXXXXXX
+client_id: xxxxxxxxxxxxxxxxxxxxxxxxxx
+client_secret: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# Dominio de la Hosted UI (Cognito → App integration → Domain)
+domain: monitoreo-prensa.auth.us-east-2.amazoncognito.com
+# Debe coincidir EXACTO con una de las "Allowed callback URLs" del App
+# Client, y con tu dominio real de la app (requiere HTTPS)
+redirect_uri: https://tu-dominio.gob.mx/
