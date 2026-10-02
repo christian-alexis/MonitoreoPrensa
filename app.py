@@ -45,6 +45,9 @@ st.markdown(get_loading_overlay_html(), unsafe_allow_html=True)
 #   AWS Cognito Hosted UI. Requiere cognito_config.yaml y un dominio
 #   HTTPS ya configurado — ver AWS_COGNITO.md antes de activarlo.
 # El sistema local NO se eliminó: sigue siendo el respaldo por defecto.
+# AUTH_PROVIDER=none: solo desarrollo local. Sin login, sin 2FA.
+#   Úsalo únicamente en docker-compose del kit de despliegue; en cualquier
+#   servidor con datos reales dejaría la app abierta a internet.
 AUTH_PROVIDER = os.environ.get("AUTH_PROVIDER", "local").strip().lower()
 
 
@@ -55,7 +58,13 @@ def _sin_sesion():
     st.stop()
 
 
-if AUTH_PROVIDER == "cognito":
+if AUTH_PROVIDER == "none":
+    # Modo desarrollo: se salta la autenticación por completo.
+    st.session_state.authentication_status = True
+    st.session_state.username = "dev"
+    st.session_state.name = "Desarrollo local"
+
+elif AUTH_PROVIDER == "cognito":
     # ---------------------------------------------------------------
     # AWS Cognito (Hosted UI, OAuth2/OIDC)
     # ---------------------------------------------------------------

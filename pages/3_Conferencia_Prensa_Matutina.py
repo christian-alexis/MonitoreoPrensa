@@ -265,6 +265,14 @@ if "resumen_bg_ctx" not in st.session_state:
     st.session_state.resumen_bg_ctx = None
 if "generando_resumen_bg" not in st.session_state:
     st.session_state.generando_resumen_bg = False
+if "conferencia_texto" not in st.session_state:
+    st.session_state.conferencia_texto = ""
+if "conferencia_texto_titulo" not in st.session_state:
+    st.session_state.conferencia_texto_titulo = ""
+if "conferencia_texto_ver" not in st.session_state:
+    st.session_state.conferencia_texto_ver = 0
+if "_pdf_link_pendiente" not in st.session_state:
+    st.session_state._pdf_link_pendiente = ""
 
 # Lock para el contexto de generación en segundo plano: el hilo de trabajo
 # SOLO toca este dict (nunca st.session_state), así un rerun disparado por
@@ -438,6 +446,71 @@ def dialog_uso():
 
 
 # =========================================================
+# POLLING DEL RESUMEN EN SEGUNDO PLANO
+# =========================================================
+def _snapshot_ctx() -> dict:
+    """Copia thread-safe del ctx de la generación en background."""
+    ctx = st.session_state.get("resumen_bg_ctx")
+    if not ctx:
+        return {}
+    with _RESUMEN_LOCK:
+        return {
+            "pct": ctx["pct"],
+            "done": ctx["done"],
+            "error": ctx["error"],
+            "resumen": ctx["resumen"],
+            "uso_eventos": list(ctx["uso_eventos"]),
+            "meta": dict(ctx.get("meta") or {}),
+        }
+
+
+@st.fragment(run_every="2s")
+def panel_progreso_resumen():
+    """Muestra el avance del hilo y recoge el resultado cuando termina."""
+    snap = _snapshot_ctx()
+    if not snap:
+        return
+
+    if not snap["done"]:
+        pct = max(0, min(int(snap["pct"]), 100))
+        st.progress(pct, text=f"Generando resumen ejecutivo... {pct}%")
+        st.caption("Puedes seguir interactuando con la página; la generación no se cancela.")
+        return
+
+    meta = snap["meta"]
+    modulo = meta.get("modulo", "mananera")
+    accion = meta.get("accion", "generar_resumen")
+    resumen = snap["resumen"]
+    fecha_dt = st.session_state.get("conferencia_fecha")
+
+    st.session_state.generando_resumen_bg = False
+    st.session_state.resumen_bg_ctx = None
+    st.session_state.resumen_bg_thread = None
+
+    if snap["error"]:
+        st.error(snap["error"])
+        registrar(_usuario, modulo, accion, exito=False,
+                  detalle={"motivo": "excepcion_hilo", "error": snap["error"][:200]})
+        return
+
+    if not resumen or resumen.startswith("Error:"):
+        st.session_state.conferencia_resumen = ""
+        st.error(resumen or "La generación no devolvió ningún resultado.")
+        registrar(_usuario, modulo, accion, exito=False,
+                  detalle={"motivo": "fallo_generacion_ia"})
+        return
+
+    st.session_state.conferencia_resumen = resumen
+    if fecha_dt:
+        st.session_state.conferencia_uso = construir_uso(snap["uso_eventos"], fecha_dt)
+    st.session_state._pdf_link_pendiente = meta.get("link", "") or ""
+    registrar(_usuario, modulo, accion, detalle={
+        "maestro_usado": (st.session_state.conferencia_uso or {}).get("maestro_usado"),
+    })
+    st.rerun(scope="app")
+
+
+# =========================================================
 # CONFIGURACIÓN DE IA (compartida)
 # =========================================================
 with st.expander("⚙️ Configuración de IA", expanded=False):
@@ -571,14 +644,15 @@ if modo == "Conferencia de Prensa Matutina (Mañanera)":
             st.error(texto)
             st.info("Puedes intentar en: https://www.gob.mx/presidencia/es/archivo/articulos")
         else:
-            with st.expander("📄 Ver versión estenográfica completa", expanded=False):
-                st.text_area("Texto completo:", texto, height=300, key="txt_mananera")
+            st.session_state.conferencia_texto = texto
+            st.session_state.conferencia_texto_titulo = "📄 Ver versión estenográfica completa"
+            st.session_state.conferencia_texto_ver += 1
 
             _iniciar_resumen_bg(
                 procesar_conferencia, texto, fecha_dt,
                 _build_keys(), _get_block_providers(), st.session_state.get("ai_master_provider", "Groq"),
                 meta={
-                    "pagina": "mananera", "accion": "buscar_y_resumir",
+                    "modulo": "mananera", "accion": "buscar_y_resumir", "link": "",
                     "detalle": {"fecha": fecha_dt.strftime("%d/%m/%Y")},
                 },
             )
@@ -622,25 +696,35 @@ elif modo == "Análisis de notas":
             elif len(texto) < 200:
                 st.error("No se pudo extraer contenido suficiente de la URL. Verifica que el enlace sea válido y accesible.")
             else:
-                with st.expander("📄 Ver texto extraído de la nota", expanded=False):
-                    st.text_area("Texto extraído:", texto, height=300, key="txt_informe")
-                progress_bar = st.progress(0, text="Dividiendo la nota en bloques...")
-                def actualizar_inf(pct):
-                    progress_bar.progress(pct, text=f"Generando resumen ejecutivo... {pct}%")
+                st.session_state.conferencia_texto = texto
+                st.session_state.conferencia_texto_titulo = "📄 Ver texto extraído de la nota"
+                st.session_state.conferencia_texto_ver += 1
 
-                if resumen.startswith("Error:"):
-                    registrar(_usuario, "analisis_notas", "generar_resumen", exito=False, detalle={
-                        "motivo": "fallo_generacion_ia",
-                    })
-                    st.error(resumen)
-                else:
-                    st.session_state.conferencia_resumen = resumen
-                    st.session_state.conferencia_uso = construir_uso(uso_eventos, fecha_dt)
-                    st.session_state.conferencia_pdf_link = url_informe.strip()
-                    registrar(_usuario, "analisis_notas", "generar_resumen", detalle={
-                        "maestro_usado": st.session_state.conferencia_uso.get("maestro_usado"),
-                    })
-                    dialog_uso()
+                _iniciar_resumen_bg(
+                    procesar_notas, texto, fecha_dt,
+                    _build_keys(), _get_block_providers(), st.session_state.get("ai_master_provider", "Groq"),
+                    meta={
+                        "modulo": "analisis_notas", "accion": "generar_resumen",
+                        "link": url_informe.strip(),
+                        "detalle": {"url": url_informe.strip()},
+                    },
+                )
+                st.rerun()
+
+
+# =========================================================
+# TEXTO FUENTE + PROGRESO (sobreviven al rerun)
+# =========================================================
+if st.session_state.conferencia_texto:
+    with st.expander(st.session_state.conferencia_texto_titulo, expanded=False):
+        st.text_area(
+            "Texto completo:", st.session_state.conferencia_texto,
+            height=300, key=f"txt_fuente_{st.session_state.conferencia_texto_ver}",
+            disabled=True,
+        )
+
+if st.session_state.get("generando_resumen_bg"):
+    panel_progreso_resumen()
 
 
 # =========================================================
@@ -678,6 +762,10 @@ if st.session_state.conferencia_resumen:
         key="conferencia_pdf_titulo",
         help="Solo aparece en el encabezado de cada página del PDF (debajo de UNIDAD DE POLÍTICA Y ESTRATEGÍA PARA RESULTADOS / COORDINACIÓN DE FORTALECIMIENTO INSTITUCIONAL). No se muestra en el cuerpo del documento.",
     )
+
+    if st.session_state._pdf_link_pendiente:
+        st.session_state.conferencia_pdf_link = st.session_state._pdf_link_pendiente
+        st.session_state._pdf_link_pendiente = ""
 
     link_nota = st.text_input(
         "Link de la nota (opcional):",
@@ -750,7 +838,9 @@ if st.session_state.conferencia_resumen:
             st.session_state.conferencia_resumen = ""
             st.session_state.conferencia_fecha = None
             st.session_state.conferencia_uso = None
-            st.session_state.conferencia_pdf_link = ""
+            st.session_state.conferencia_texto = ""
+            st.session_state.conferencia_texto_titulo = ""
+            st.session_state._pdf_link_pendiente = ""
             st.rerun()
 
 # =========================================================
